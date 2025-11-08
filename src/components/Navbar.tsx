@@ -18,92 +18,72 @@ export function Navbar() {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const leftLinks = [
+    { to: "/", label: "INICIO" },
+    { to: "/nosotros", label: "NOSOTROS" },
+    { to: "/servicios", label: "SERVICIOS" },
+  ];
+
+  const rightLinks = [
+    { to: "/galeria", label: "GALERÍA" },
+    { to: "/clientes", label: "CLIENTES" },
+    user
+      ? isAdmin
+        ? { to: "/admin", label: "ADMIN" }
+        : { to: "/profile", label: "MI PERFIL" }
+      : { to: "/auth", label: "PORTAL" },
+  ];
+
   return (
     <nav className="sticky top-0 z-50 w-full bg-navy shadow-md">
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
-        <Link to="/" className="flex items-center">
-          <div className="bg-primary px-6 py-2 text-2xl font-bold text-primary-foreground">
-            SASS BLUM
-          </div>
-        </Link>
-
-        <div className="hidden items-center gap-6 md:flex">
-          <Link
-            to="/"
-            className={`transition-colors hover:text-primary ${
-              isActive("/") ? "text-primary" : "text-white"
-            }`}
-          >
-            INICIO
-          </Link>
-          <Link
-            to="/nosotros"
-            className={`transition-colors hover:text-primary ${
-              isActive("/nosotros") ? "text-primary" : "text-white"
-            }`}
-          >
-            NOSOTROS
-          </Link>
-          <Link
-            to="/servicios"
-            className={`transition-colors hover:text-primary ${
-              isActive("/servicios") ? "text-primary" : "text-white"
-            }`}
-          >
-            SERVICIOS
-          </Link>
-          <Link
-            to="/galeria"
-            className={`transition-colors hover:text-primary ${
-              isActive("/galeria") ? "text-primary" : "text-white"
-            }`}
-          >
-            GALERÍA
-          </Link>
-          <Link
-            to="/clientes"
-            className={`transition-colors hover:text-primary ${
-              isActive("/clientes") ? "text-primary" : "text-white"
-            }`}
-          >
-            CLIENTES
-          </Link>
-          {user && (
+        <div className="hidden flex-1 items-center justify-start gap-6 md:flex">
+          {leftLinks.map((link) => (
             <Link
-              to="/tickets"
+              key={link.to}
+              to={link.to}
               className={`transition-colors hover:text-primary ${
-                isActive("/tickets") ? "text-primary" : "text-white"
+                isActive(link.to) ? "text-primary" : "text-white"
               }`}
             >
-              TICKETS
+              {link.label}
             </Link>
-          )}
-          {isAdmin && (
-            <Link
-              to="/admin"
-              className={`transition-colors hover:text-primary ${
-                isActive("/admin") ? "text-primary" : "text-white"
-              }`}
-            >
-              ADMIN
-            </Link>
-          )}
+          ))}
         </div>
 
-        <div className="flex items-center gap-3">
+        <Link
+          to="/"
+          className="flex items-center justify-center rounded-full border-2 border-primary px-6 py-2 text-xl font-bold text-primary md:text-2xl"
+        >
+          SASS BLUM
+        </Link>
+
+        <div className="flex flex-1 items-center justify-end gap-3">
+          <div className="hidden items-center gap-6 md:flex">
+            {rightLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className={`transition-colors hover:text-primary ${
+                  isActive(link.to) ? "text-primary" : "text-white"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+
           {user ? (
             <>
               <NotificationBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="border-primary text-white hover:bg-primary">
+                  <Button className="flex h-10 w-10 items-center justify-center border border-primary bg-transparent text-white hover:bg-primary">
                     <User className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>
-                    {profile?.full_name || user.email}
-                  </DropdownMenuLabel>
+                  <DropdownMenuLabel>{profile?.full_name || user.email}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="w-full cursor-pointer">
@@ -120,9 +100,7 @@ export function Navbar() {
             </>
           ) : (
             <Link to="/auth">
-              <Button className="bg-primary hover:bg-primary/90">
-                Iniciar Sesión
-              </Button>
+              <Button className="bg-primary hover:bg-primary/90">Iniciar Sesión</Button>
             </Link>
           )}
         </div>

@@ -54,7 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq("role", "admin")
       .single();
 
-    setIsAdmin(!!roleData);
+    const emailSource = profileData?.email || user?.email || session?.user?.email || "";
+    const hasDomainPrivilege = emailSource.toLowerCase().endsWith("@sassblum.com");
+
+    setIsAdmin(Boolean(roleData) || hasDomainPrivilege);
   };
 
   useEffect(() => {

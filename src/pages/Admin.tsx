@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -19,6 +18,8 @@ import {
 import { toast } from "sonner";
 import { Users, Ticket as TicketIcon, Bell, Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { badgeVariants } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface Ticket {
   id: string;
@@ -45,7 +46,7 @@ interface Profile {
 }
 
 export default function Admin() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isAdmin } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,40 +59,69 @@ export default function Admin() {
   });
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (currentUser) {
+      fetchData();
+    }
+  }, [currentUser]);
 
   const fetchData = async () => {
+    if (!currentUser) {
+      setTickets([]);
+      setUsers([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
 
-    // Fetch tickets with user profiles
-    const { data: ticketsData } = await supabase
+    const { data: ticketsData, error: ticketsError } = await supabase
       .from("tickets")
       .select("*")
+      .eq("assigned_to", currentUser.id)
       .order("created_at", { ascending: false });
 
+    if (ticketsError) {
+      toast.error("Error al cargar tickets asignados");
+    }
+
     if (ticketsData) {
-      // Fetch profiles for each ticket
-      const ticketsWithProfiles = await Promise.all(
-        ticketsData.map(async (ticket) => {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name, email, company_name")
-            .eq("id", ticket.user_id)
-            .single();
-          return { ...ticket, profiles: profile };
-        })
-      );
+      const userIds = Array.from(new Set(ticketsData.map((ticket) => ticket.user_id)));
+      let profilesMap = new Map<string, Ticket["profiles"]>();
+
+      if (userIds.length > 0) {
+        const { data: profileRows } = await supabase
+          .from("profiles")
+          .select("id, full_name, email, company_name")
+          .in("id", userIds);
+
+        if (profileRows) {
+          profilesMap = new Map(
+            profileRows.map((profile) => [profile.id, profile] as [string, Ticket["profiles"]])
+          );
+        }
+      }
+
+      const ticketsWithProfiles = ticketsData.map((ticket) => ({
+        ...ticket,
+        profiles:
+          profilesMap.get(ticket.user_id) ?? {
+            full_name: "",
+            email: "",
+            company_name: "",
+          },
+      }));
+
       setTickets(ticketsWithProfiles as Ticket[]);
     }
 
-    // Fetch users
     const { data: usersData } = await supabase
       .from("profiles")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (usersData) setUsers(usersData);
+    if (usersData) {
+      setUsers(usersData);
+    }
 
     setLoading(false);
   };
@@ -148,15 +178,23 @@ export default function Admin() {
       closed: "Cerrado",
     } as const;
 
+    const variantKey = variants[status as keyof typeof variants] ?? "secondary";
+    const label = labels[status as keyof typeof labels] ?? status;
+
     return (
-      <Badge variant={variants[status as keyof typeof variants] || "secondary"} className={status === "resolved" ? "bg-success text-success-foreground" : ""}>
-        {labels[status as keyof typeof labels] || status}
-      </Badge>
+      <span
+        className={cn(
+          badgeVariants({ variant: variantKey }),
+          status === "resolved" ? "bg-success text-success-foreground" : ""
+        )}
+      >
+        {label}
+      </span>
     );
   };
 
-  // Check if current user is admin with @sassblum.com email
-  const isValidAdmin = currentUser?.email?.endsWith("@sassblum.com");
+  // Rely on Supabase role flag to determine admin access
+  const isValidAdmin = isAdmin;
 
   if (!isValidAdmin) {
     return (
@@ -209,12 +247,17 @@ export default function Admin() {
             <CardHeader>
               <CardTitle>Gestión de Tickets</CardTitle>
               <CardDescription>
-                Total de tickets: {tickets.length}
+                Total de tickets asignados: {tickets.length}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {tickets.map((ticket) => (
-                <Card key={ticket.id}>
+              {tickets.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
+                  No tienes tickets asignados actualmente.
+                </div>
+              ) : (
+                tickets.map((ticket) => (
+                  <Card key={ticket.id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
@@ -251,7 +294,8 @@ export default function Admin() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
         </TabsContent>
