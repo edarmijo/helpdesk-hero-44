@@ -8,8 +8,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Ticket as TicketIcon, Clock } from "lucide-react";
+import { Ticket as TicketIcon, Clock, Trash2 } from "lucide-react";
 
 interface Ticket {
   id: string;
@@ -97,6 +108,21 @@ export default function Tickets() {
         {labels[status as keyof typeof labels] || status}
       </Badge>
     );
+  };
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    const { error } = await supabase
+      .from("tickets")
+      .delete()
+      .eq("id", ticketId);
+
+    if (error) {
+      toast.error("Error al eliminar ticket");
+      console.error(error);
+    } else {
+      toast.success("Ticket eliminado exitosamente");
+      fetchTickets();
+    }
   };
 
   return (
@@ -208,13 +234,39 @@ export default function Tickets() {
             <Card key={ticket.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="flex-1">
                     <CardTitle>{ticket.subject}</CardTitle>
                     <CardDescription className="mt-1">
                       {ticket.service_type.replace(/_/g, " ").toUpperCase()}
                     </CardDescription>
                   </div>
-                  {getStatusBadge(ticket.status)}
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(ticket.status)}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Eliminar ticket?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Se eliminará permanentemente este ticket.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteTicket(ticket.id)}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
+                            Eliminar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

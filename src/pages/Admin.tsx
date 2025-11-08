@@ -5,8 +5,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Users, Ticket as TicketIcon, Bell } from "lucide-react";
+import { Users, Ticket as TicketIcon, Bell, Send } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Ticket {
   id: string;
@@ -33,9 +45,17 @@ interface Profile {
 }
 
 export default function Admin() {
+  const { user: currentUser } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notificationDialog, setNotificationDialog] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [notificationForm, setNotificationForm] = useState({
+    title: "",
+    message: "",
+    type: "info",
+  });
 
   useEffect(() => {
     fetchData();
@@ -90,6 +110,29 @@ export default function Admin() {
     }
   };
 
+  const sendNotification = async () => {
+    if (!selectedUserId || !notificationForm.title || !notificationForm.message) {
+      toast.error("Complete todos los campos");
+      return;
+    }
+
+    const { error } = await supabase.from("notifications").insert({
+      user_id: selectedUserId,
+      title: notificationForm.title,
+      message: notificationForm.message,
+      type: notificationForm.type,
+    });
+
+    if (error) {
+      toast.error("Error al enviar notificación");
+    } else {
+      toast.success("Notificación enviada exitosamente");
+      setNotificationDialog(false);
+      setNotificationForm({ title: "", message: "", type: "info" });
+      setSelectedUserId("");
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const variants = {
       pending: "outline",
@@ -111,6 +154,24 @@ export default function Admin() {
       </Badge>
     );
   };
+
+  // Check if current user is admin with @sassblum.com email
+  const isValidAdmin = currentUser?.email?.endsWith("@sassblum.com");
+
+  if (!isValidAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Acceso Denegado</CardTitle>
+            <CardDescription>
+              Solo los administradores con email @sassblum.com pueden acceder a este panel.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -231,16 +292,103 @@ export default function Admin() {
         <TabsContent value="notifications" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Notificaciones</CardTitle>
-              <CardDescription>
-                Sistema de notificaciones para cambios de estado
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Gestión de Notificaciones</CardTitle>
+                  <CardDescription>
+                    Envíe notificaciones personalizadas a los usuarios
+                  </CardDescription>
+                </div>
+                <Dialog open={notificationDialog} onOpenChange={setNotificationDialog}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-primary hover:bg-primary/90">
+                      <Send className="mr-2 h-4 w-4" />
+                      Nueva Notificación
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Enviar Notificación</DialogTitle>
+                      <DialogDescription>
+                        Envíe una notificación personalizada a un usuario
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Usuario</Label>
+                        <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccione un usuario" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {users.map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.full_name} ({user.email})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Título</Label>
+                        <Input
+                          value={notificationForm.title}
+                          onChange={(e) =>
+                            setNotificationForm({ ...notificationForm, title: e.target.value })
+                          }
+                          placeholder="Título de la notificación"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Mensaje</Label>
+                        <Textarea
+                          value={notificationForm.message}
+                          onChange={(e) =>
+                            setNotificationForm({ ...notificationForm, message: e.target.value })
+                          }
+                          placeholder="Contenido de la notificación"
+                          rows={4}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Tipo</Label>
+                        <Select
+                          value={notificationForm.type}
+                          onValueChange={(value) =>
+                            setNotificationForm({ ...notificationForm, type: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="info">Información</SelectItem>
+                            <SelectItem value="success">Éxito</SelectItem>
+                            <SelectItem value="warning">Advertencia</SelectItem>
+                            <SelectItem value="error">Error</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button onClick={sendNotification} className="w-full">
+                        Enviar Notificación
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Las notificaciones se envían automáticamente cuando se actualiza el estado de
-                un ticket.
-              </p>
+              <div className="rounded-lg bg-muted p-4">
+                <p className="mb-2 font-semibold">Sistema de Notificaciones Automáticas</p>
+                <p className="text-sm text-muted-foreground">
+                  Las notificaciones se envían automáticamente cuando:
+                </p>
+                <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted-foreground">
+                  <li>Se actualiza el estado de un ticket</li>
+                  <li>Se asigna un responsable a un ticket</li>
+                  <li>Un administrador envía una notificación manual</li>
+                </ul>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

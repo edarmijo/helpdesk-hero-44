@@ -1,3 +1,5 @@
+import clientsLogos from "@/assets/clients-logos.png";
+
 export default function Clientes() {
   return (
     <div className="min-h-screen">
@@ -18,7 +20,15 @@ export default function Clientes() {
             tecnológicas personalizadas que impulsan su crecimiento y eficiencia operativa.
           </p>
 
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-border bg-card p-8 shadow-lg">
+            <img
+              src={clientsLogos}
+              alt="Nuestros Clientes"
+              className="w-full"
+            />
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {[
               "Policentro",
               "SCD",
@@ -33,12 +43,11 @@ export default function Clientes() {
               "Clínica Cayaco",
               "Consitos",
               "Regus",
-              "Viamatica",
               "Super Éxito",
             ].map((client, index) => (
               <div
                 key={index}
-                className="flex items-center justify-center rounded-lg border border-border bg-card p-6 transition-shadow hover:shadow-md"
+                className="flex items-center justify-center rounded-lg border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-md"
               >
                 <p className="text-center font-semibold text-navy">{client}</p>
               </div>

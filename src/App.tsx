@@ -6,10 +6,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Navbar } from "@/components/Navbar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Footer from "@/components/Footer";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Tickets from "./pages/Tickets";
 import Admin from "./pages/Admin";
+import Profile from "./pages/Profile";
 import Servicios from "./pages/Servicios";
 import Nosotros from "./pages/Nosotros";
 import Galeria from "./pages/Galeria";
@@ -42,6 +44,14 @@ const App = () => (
               }
             />
             <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin"
               element={
                 <ProtectedRoute requireAdmin>
@@ -51,6 +61,7 @@ const App = () => (
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <Footer />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
